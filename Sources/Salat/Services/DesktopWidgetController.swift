@@ -81,6 +81,15 @@ final class DesktopWidgetController {
 /// Lets the user drag the borderless widget from anywhere on its surface.
 private final class DraggableHostingView: NSHostingView<AnyView> {
     override var mouseDownCanMoveWindow: Bool { true }
+
+    // SwiftUI swallows mouseDown, so background dragging never kicks in on its own.
+    override func mouseDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.control) {
+            super.mouseDown(with: event) // control-click opens the context menu
+        } else {
+            window?.performDrag(with: event)
+        }
+    }
 }
 
 private struct WidgetContainer: View {
