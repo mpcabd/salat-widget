@@ -5,7 +5,7 @@ set -euo pipefail
 
 ROOT="${0:A:h:h}"
 cd "$ROOT"
-VERSION="${1:-1.0.0}"
+VERSION="${1:-1.0.1}"
 APP="build/Salat.app"
 DMG="build/Salat-$VERSION.dmg"
 STAGE="build/dmg-stage"

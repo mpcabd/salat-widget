@@ -9,7 +9,7 @@ cd "$ROOT"
 
 APP_NAME="Salat"
 BUNDLE_ID="com.mpcabd.salat"
-VERSION="1.0.0"
+VERSION="${SALAT_VERSION:-1.0.1}"
 BUILD_NUMBER="$(date +%Y%m%d%H%M)"
 OUT="$ROOT/build"
 APP="$OUT/$APP_NAME.app"
