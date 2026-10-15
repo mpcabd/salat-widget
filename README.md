@@ -25,7 +25,8 @@
 - It also shows the Hijri and Gregorian dates, the Qibla bearing, and a way to browse other days. Each prayer row has a 🔔 notification toggle and a 🔊 Azan toggle.
 
 **🔊 Azan**
-- Five freely licensed recordings, including the late **Sabah Fakhri**, plus a gentle chime. You can choose a separate sound for **Fajr** or use **your own audio file**.
+- Two recordings: **Hamza Moaz** for Dhuhr, Asr, Maghrib and Isha, and **Mishary Alafasy**'s Fajr Azan (maqam Sikah). There's also a gentle chime, and you can choose a different sound for **Fajr**.
+- **Add your own recordings**: pick audio files or drop them into Settings → Azan, give them a name, and mark Fajr versions so they're only offered for Fajr.
 - Volume, gentle fade-in, and a *short Azan* mode (~30 s).
 - To stop it, use the popover, the notification's **Stop Azan** button, or <kbd>Esc</kbd> while the popover is open. The menu bar icon changes while it plays.
 
@@ -113,6 +114,8 @@ scripts/               App bundling, DMG, icon and screenshot compositing
 Resources/             Azan audio and app icon
 ```
 
+To bundle another Azan, put the audio file in `Resources/Audio/` and add an entry to `Sources/Salat/Model/AzanCatalog.swift`. Mark Fajr versions with `fajr: true`. The tests check that every file in `Resources/Audio/` has an entry, and that every entry's file exists.
+
 ### Tests
 
 ```sh
@@ -135,15 +138,12 @@ swift run prayerkit-check 21.4225 39.8262 Asia/Riyadh ummAlQura 2026-10-06
 
 ## Credits
 
-- **Azan recordings** from Wikimedia Commons:
-  - [Sabah Fakhri](https://commons.wikimedia.org/wiki/File:Call_to_prayer_by_Sabah_Fakhry.mp3) (public domain)
-  - [Aaqib Azeez / Atcovi](https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3) (CC BY-SA 4.0)
-  - [Adam-synagda](https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg) (CC0)
-  - [Andrewler](https://commons.wikimedia.org/wiki/File:Azan.ogg) (CC BY-SA 4.0)
-  - [Fraguando, Hassan II Mosque](https://commons.wikimedia.org/wiki/File:Llamada_a_oraci%C3%B3n_Mezquita_Hassan_II.wav) (CC BY-SA 4.0)
+- **Azan recordings**:
+  - [Hamza Moaz](https://soundcloud.com/theislamicsound/beautiful-azan-by-qari-hamza-maaz)
+  - [Mishary Alafasy, Fajr Azan (Sikah)](https://soundcloud.com/alafasy/athanalfajrsaikah)
 - **Prayer times**: calculated with [Adhan](https://github.com/batoulapps/adhan-swift) by Batoul Apps (MIT License).
-- **Made by** [Claude](https://claude.com/claude-code), for and published by [@mpcabd](https://github.com/mpcabd).
+- **Made** mostly by [Claude](https://claude.com/claude-code), for and published by [@mpcabd](https://github.com/mpcabd).
 
 ## License
 
-The code is released under the [MIT License](LICENSE). It depends on [Adhan](https://github.com/batoulapps/adhan-swift) (MIT License, © Batoul Apps), whose license ships inside the app bundle. The Azan recordings in `Resources/Audio` keep their original licenses, listed under [Credits](#credits).
+The code is released under the [MIT License](LICENSE). It depends on [Adhan](https://github.com/batoulapps/adhan-swift) (MIT License, © Batoul Apps), whose license ships inside the app bundle. The Azan recordings in `Resources/Audio` belong to their respective owners.

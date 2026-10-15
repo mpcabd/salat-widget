@@ -27,6 +27,13 @@ enum Snapshotter {
         s.location = SavedLocation(name: "Dubai", country: "United Arab Emirates", countryCode: "AE",
                                    coordinates: Coordinates(latitude: 25.2048, longitude: 55.2708),
                                    timeZoneID: "Asia/Dubai")
+        // Sample entries so the "Your recordings" section isn't empty. Their files don't exist; that's fine for a render.
+        s.userAzans = lang == "ar"
+            ? [UserAzan(id: "user.sample-mosque", name: "أذان مسجد الحي", fileName: "sample.mp3"),
+               UserAzan(id: "user.sample-fajr", name: "أذان الفجر — مسجد الحي", fileName: "sample-fajr.mp3", isFajr: true)]
+            : [UserAzan(id: "user.sample-mosque", name: "Neighbourhood mosque", fileName: "sample.mp3"),
+               UserAzan(id: "user.sample-fajr", name: "Neighbourhood mosque — Fajr", fileName: "sample-fajr.mp3", isFajr: true)]
+        s.fajrAzanSound = "user.sample-fajr"
         model.settings = s
         if let t = value(after: "--time", in: arguments) {
             let parts = t.split(separator: ":").compactMap { Int($0) }

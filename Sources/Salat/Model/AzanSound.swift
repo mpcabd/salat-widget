@@ -1,40 +1,54 @@
 import Foundation
 
+/// A playable azan. The bundled recordings are listed in `AzanCatalog.swift`.
 struct AzanSound: Identifiable, Hashable {
     let id: String
     let nameEN: String
     let nameAR: String
     let fileName: String?
+    /// A Fajr azan (with “الصلاة خير من النوم”). Offered only for Fajr.
+    let isFajr: Bool
     let credit: String
     let license: String
     let sourceURL: String?
 
-    static let defaultID = "fakhry"
-    static let customID = "custom"
+    init(id: String, nameEN: String, nameAR: String, file: String?, fajr: Bool = false,
+         credit: String = "", license: String = "", source: String? = nil) {
+        self.id = id
+        self.nameEN = nameEN
+        self.nameAR = nameAR
+        self.fileName = file
+        self.isFajr = fajr
+        self.credit = credit
+        self.license = license
+        self.sourceURL = source
+    }
+
     static let chimeID = "chime"
 
-    static let builtIn: [AzanSound] = [
-        AzanSound(id: "fakhry", nameEN: "Sabah Fakhri — Aleppo", nameAR: "صباح فخري — حلب",
-                  fileName: "fakhry.mp3", credit: "Sabah Fakhri", license: "Public domain",
-                  sourceURL: "https://commons.wikimedia.org/wiki/File:Call_to_prayer_by_Sabah_Fakhry.mp3"),
-        AzanSound(id: "azeez", nameEN: "Aaqib Azeez", nameAR: "عاقب عزيز",
-                  fileName: "azeez.mp3", credit: "Atcovi / Aaqib Azeez", license: "CC BY-SA 4.0",
-                  sourceURL: "https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3"),
-        AzanSound(id: "beautiful", nameEN: "Serene", nameAR: "هادئ",
-                  fileName: "beautiful.mp3", credit: "Adam-synagda", license: "CC0",
-                  sourceURL: "https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg"),
-        AzanSound(id: "andrewler", nameEN: "Classic", nameAR: "كلاسيكي",
-                  fileName: "andrewler.mp3", credit: "Andrewler", license: "CC BY-SA 4.0",
-                  sourceURL: "https://commons.wikimedia.org/wiki/File:Azan.ogg"),
-        AzanSound(id: "hassan2", nameEN: "Hassan II Mosque — Casablanca (ambient)",
-                  nameAR: "مسجد الحسن الثاني — الدار البيضاء (أجواء)",
-                  fileName: "hassan2.m4a", credit: "Fraguando", license: "CC BY-SA 4.0",
-                  sourceURL: "https://commons.wikimedia.org/wiki/File:Llamada_a_oraci%C3%B3n_Mezquita_Hassan_II.wav"),
-        AzanSound(id: chimeID, nameEN: "Gentle chime", nameAR: "تنبيه لطيف",
-                  fileName: nil, credit: "macOS", license: "", sourceURL: nil),
-    ]
+    static let chime = AzanSound(id: chimeID, nameEN: "Gentle chime", nameAR: "تنبيه لطيف",
+                                 file: nil, credit: "macOS")
+
+    static let builtIn: [AzanSound] = AzanCatalog.recordings + [chime]
+
+    /// Sounds offered for the given prayer: Fajr gets everything, other prayers skip Fajr-only recordings.
+    static func choices(fajr: Bool) -> [AzanSound] {
+        builtIn.filter { fajr || !$0.isFajr }
+    }
+
+    static func defaultID(fajr: Bool) -> String {
+        fajr ? AzanCatalog.defaultFajrID : AzanCatalog.defaultID
+    }
 
     static func sound(id: String) -> AzanSound? { builtIn.first { $0.id == id } }
+
+    /// Maps a saved sound ID to one that's still offered for that prayer, so bundled recordings removed
+    /// in later versions, and user recordings that were deleted or marked as Fajr, fall back to the default.
+    static func validID(_ id: String, fajr: Bool, user: [UserAzan] = []) -> String {
+        if choices(fajr: fajr).contains(where: { $0.id == id }) { return id }
+        if user.contains(where: { $0.id == id && (fajr || !$0.isFajr) }) { return id }
+        return defaultID(fajr: fajr)
+    }
 
     func name(arabic: Bool) -> String { arabic ? nameAR : nameEN }
 

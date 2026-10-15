@@ -93,9 +93,9 @@ struct AppSettings: Codable, Equatable {
     var reminderMinutes = 10
 
     // Azan
-    var azanSound = AzanSound.defaultID
-    var fajrAzanSound = AzanSound.defaultID
-    var customAzanPath: String?
+    var azanSound = AzanSound.defaultID(fajr: false)
+    var fajrAzanSound = AzanSound.defaultID(fajr: true)
+    var userAzans: [UserAzan] = []
     var azanVolume = 0.8
     var azanFadeIn = true
     var shortAzan = false
@@ -120,6 +120,12 @@ struct AppSettings: Codable, Equatable {
         }
         return d
     }()
+
+    /// Points both azan pickers at sounds that still exist and suit their prayer.
+    mutating func normalizeAzanSelections() {
+        azanSound = AzanSound.validID(azanSound, fajr: false, user: userAzans)
+        fajrAzanSound = AzanSound.validID(fajrAzanSound, fajr: true, user: userAzans)
+    }
 
     func preference(for prayer: Prayer) -> PrayerPreference {
         preferences[prayer.rawValue] ?? AppSettings.defaultPreferences[prayer.rawValue]!
@@ -171,7 +177,7 @@ struct AppSettings: Codable, Equatable {
         reminderMinutes = v(.reminderMinutes, d.reminderMinutes)
         azanSound = v(.azanSound, d.azanSound)
         fajrAzanSound = v(.fajrAzanSound, d.fajrAzanSound)
-        customAzanPath = v(.customAzanPath, d.customAzanPath)
+        userAzans = v(.userAzans, d.userAzans)
         azanVolume = v(.azanVolume, d.azanVolume)
         azanFadeIn = v(.azanFadeIn, d.azanFadeIn)
         shortAzan = v(.shortAzan, d.shortAzan)
@@ -190,8 +196,35 @@ enum SettingsPersistence {
 
     static func load() -> AppSettings {
         guard let data = UserDefaults.standard.data(forKey: key),
-              let s = try? JSONDecoder().decode(AppSettings.self, from: data) else { return AppSettings() }
+              var s = try? JSONDecoder().decode(AppSettings.self, from: data) else { return AppSettings() }
+        let migrated = migrateCustomAzan(from: data, into: &s, library: .shared)
+        s.normalizeAzanSelections()
+        if migrated { save(s) }  // so the old file isn't imported again next launch
         return s
+    }
+
+    private struct LegacyAzan: Decodable {
+        var customAzanPath: String?
+    }
+
+    /// Before the recordings library there was a single "custom" file (`customAzanPath`).
+    /// Moves it into the library and keeps it selected wherever it was.
+    @discardableResult
+    static func migrateCustomAzan(from data: Data, into s: inout AppSettings, library: AzanLibrary) -> Bool {
+        let legacyID = "custom"
+        guard let path = (try? JSONDecoder().decode(LegacyAzan.self, from: data))?.customAzanPath,
+              !s.userAzans.contains(where: { $0.id == legacyID }) else { return false }
+        let source = URL(fileURLWithPath: path)
+        guard let imported = try? library.importFile(at: source) else { return false }
+        var azan = imported
+        azan.id = legacyID
+        s.userAzans.insert(azan, at: 0)
+        // The old file was our own copy in Application Support; anything else belongs to the user.
+        if source.deletingLastPathComponent().standardizedFileURL
+            == library.directory.deletingLastPathComponent().standardizedFileURL {
+            try? FileManager.default.removeItem(at: source)
+        }
+        return true
     }
 
     static func save(_ settings: AppSettings) {

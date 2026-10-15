@@ -236,13 +236,20 @@ final class AppModel {
     }
 
     func azanURL(for prayer: Prayer?) -> URL? {
-        let id = prayer == .fajr ? settings.fajrAzanSound : settings.azanSound
-        if id == AzanSound.customID, let path = settings.customAzanPath,
-           FileManager.default.fileExists(atPath: path) {
-            return URL(fileURLWithPath: path)
-        }
+        let fajr = prayer == .fajr
+        let id = fajr ? settings.fajrAzanSound : settings.azanSound
         if id == AzanSound.chimeID { return nil }
-        return (AzanSound.sound(id: id) ?? AzanSound.sound(id: AzanSound.defaultID))?.url
+        if let recording = settings.userAzans.first(where: { $0.id == id }) {
+            let url = AzanLibrary.shared.url(for: recording)
+            if FileManager.default.fileExists(atPath: url.path) { return url }
+        }
+        return (AzanSound.sound(id: id) ?? AzanSound.sound(id: AzanSound.defaultID(fajr: fajr)))?.url
+    }
+
+    /// Plays the opening of one of the user's recordings, from the recordings list in Settings.
+    func previewRecording(_ recording: UserAzan) {
+        azan.play(url: AzanLibrary.shared.url(for: recording), volume: settings.azanVolume,
+                  fadeIn: settings.azanFadeIn, short: false, prayer: nil, preview: true)
     }
 
     // MARK: - Recompute

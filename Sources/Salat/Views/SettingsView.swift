@@ -482,6 +482,7 @@ struct AlertSettings: View {
 
 struct AzanSettings: View {
     @Environment(AppModel.self) private var model
+    @State private var rejectedFiles: [String] = []
 
     var body: some View {
         @Bindable var model = model
@@ -490,14 +491,24 @@ struct AzanSettings: View {
             Section(L.t("azan.sound")) {
                 soundPicker(L.t("azan.defaultSound"), selection: $model.settings.azanSound, prayer: .dhuhr)
                 soundPicker(L.t("azan.fajrSound"), selection: $model.settings.fajrAzanSound, prayer: .fajr)
+            }
 
-                LabeledContent(L.t("azan.customFile")) {
-                    HStack {
-                        Text(model.settings.customAzanPath.map { ($0 as NSString).lastPathComponent } ?? L.t("azan.noFile"))
-                            .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                        Button(L.t("azan.choose")) { chooseFile() }
-                    }
+            Section {
+                ForEach($model.settings.userAzans) { $recording in
+                    recordingRow($recording)
                 }
+                HStack {
+                    Button(L.t("azan.add")) { chooseFiles() }
+                    Spacer()
+                }
+                Text(L.t("azan.libraryHelp")).font(.caption).foregroundStyle(.secondary)
+                if !rejectedFiles.isEmpty {
+                    Text(L.t("azan.importFailed").replacingOccurrences(of: "{files}",
+                                                                       with: rejectedFiles.joined(separator: ", ")))
+                        .font(.caption).foregroundStyle(.red)
+                }
+            } header: {
+                Text(L.t("azan.library"))
             }
 
             Section(L.t("azan.playback")) {
@@ -528,18 +539,58 @@ struct AzanSettings: View {
             }
         }
         .formStyle(.grouped)
+        .dropDestination(for: URL.self) { urls, _ in
+            addFiles(urls)
+            return true
+        }
+        .onChange(of: model.settings.userAzans) {
+            model.settings.normalizeAzanSelections()
+        }
+    }
+
+    private func recordingRow(_ recording: Binding<UserAzan>) -> some View {
+        let L = model.L
+        let url = AzanLibrary.shared.url(for: recording.wrappedValue)
+        let previewing = model.azan.isPlaying && model.azan.isPreview && model.azan.playingURL == url
+        return HStack {
+            TextField(L.t("azan.name"), text: recording.name)
+                .labelsHidden()
+            Toggle(L.t("azan.fajrToggle"), isOn: recording.isFajr)
+                .toggleStyle(.checkbox)
+                .help(L.t("azan.fajrHelp"))
+            Button {
+                if previewing { model.azan.stop() } else { model.previewRecording(recording.wrappedValue) }
+            } label: {
+                Image(systemName: previewing ? "stop.circle.fill" : "play.circle.fill")
+                    .font(.system(size: 18))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.accentColor)
+            .help(L.t("azan.preview"))
+            Button {
+                remove(recording.wrappedValue)
+            } label: {
+                Image(systemName: "trash")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help(L.t("azan.remove"))
+        }
     }
 
     private func soundPicker(_ title: String, selection: Binding<String>, prayer: Prayer) -> some View {
         let L = model.L
         return HStack {
             Picker(title, selection: selection) {
-                ForEach(AzanSound.builtIn) { s in
+                ForEach(AzanSound.choices(fajr: prayer == .fajr)) { s in
                     Text(s.name(arabic: model.isArabic)).tag(s.id)
                 }
-                if model.settings.customAzanPath != nil {
+                let recordings = model.settings.userAzans.filter { prayer == .fajr || !$0.isFajr }
+                if !recordings.isEmpty {
                     Divider()
-                    Text(L.t("azan.custom")).tag(AzanSound.customID)
+                    ForEach(recordings) { r in
+                        Text(r.name).tag(r.id)
+                    }
                 }
             }
             Button {
@@ -559,22 +610,31 @@ struct AzanSettings: View {
         }
     }
 
-    private func chooseFile() {
+    private func chooseFiles() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.audio]
-        panel.allowsMultipleSelection = false
+        panel.allowsMultipleSelection = true
         NSApp.activate(ignoringOtherApps: true)
-        if panel.runModal() == .OK, let url = panel.url {
-            // Copy into Application Support so the file keeps working if the original moves.
-            let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("Salat", isDirectory: true)
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            let dest = dir.appendingPathComponent("custom-azan." + url.pathExtension)
-            try? FileManager.default.removeItem(at: dest)
-            let path = (try? FileManager.default.copyItem(at: url, to: dest)) != nil ? dest.path : url.path
-            model.settings.customAzanPath = path
-            model.settings.azanSound = AzanSound.customID
+        if panel.runModal() == .OK {
+            addFiles(panel.urls)
         }
+    }
+
+    private func addFiles(_ urls: [URL]) {
+        rejectedFiles = []
+        for url in urls where url.isFileURL {
+            do {
+                model.settings.userAzans.append(try AzanLibrary.shared.importFile(at: url))
+            } catch {
+                rejectedFiles.append(url.lastPathComponent)
+            }
+        }
+    }
+
+    private func remove(_ recording: UserAzan) {
+        if model.azan.playingURL == AzanLibrary.shared.url(for: recording) { model.azan.stop() }
+        AzanLibrary.shared.remove(recording)
+        model.settings.userAzans.removeAll { $0.id == recording.id }
     }
 }
 
