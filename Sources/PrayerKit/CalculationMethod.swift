@@ -1,3 +1,4 @@
+import Adhan
 import Foundation
 
 public enum CalculationMethod: String, CaseIterable, Codable, Sendable, Identifiable {
@@ -26,45 +27,41 @@ public enum CalculationMethod: String, CaseIterable, Codable, Sendable, Identifi
 
     public var id: String { rawValue }
 
-    /// Parameters for the built-in methods. `.custom` returns MWL as a starting point.
-    public var parameters: CalculationParameters {
+    /// The matching Adhan preset, if Adhan ships one.
+    var adhanMethod: Adhan.CalculationMethod? {
         switch self {
-        case .muslimWorldLeague, .custom:
-            return .init(fajrAngle: 18, isha: .angle(17))
-        case .isna:
-            return .init(fajrAngle: 15, isha: .angle(15))
-        case .egyptian:
-            return .init(fajrAngle: 19.5, isha: .angle(17.5))
-        case .ummAlQura:
-            return .init(fajrAngle: 18.5, isha: .minutes(90), ishaRamadanMinutes: 120)
-        case .karachi:
-            return .init(fajrAngle: 18, isha: .angle(18))
-        case .dubai:
-            return .init(fajrAngle: 18.2, isha: .angle(18.2),
-                         methodAdjustments: .init(sunrise: -3, dhuhr: 3, asr: 3, maghrib: 3))
+        case .muslimWorldLeague: .muslimWorldLeague
+        case .isna: .northAmerica
+        case .egyptian: .egyptian
+        case .ummAlQura: .ummAlQura
+        case .karachi: .karachi
+        case .dubai: .dubai
+        case .kuwait: .kuwait
+        case .qatar: .qatar
+        case .moonsightingCommittee: .moonsightingCommittee
+        case .singapore: .singapore
+        case .turkey: .turkey
+        case .tehran: .tehran
+        default: nil
+        }
+    }
+
+    /// Parameters for the built-in methods. `.custom` returns MWL angles as a starting point.
+    public var parameters: CalculationParameters {
+        if let adhanMethod {
+            var p = CalculationParameters(adhanPreset: self, adhanMethod)
+            // Adhan leaves the Ramadan Isha interval to the caller.
+            if self == .ummAlQura { p.ishaRamadanMinutes = 120 }
+            return p
+        }
+        // Methods Adhan has no preset for, built on its `.other` parameters.
+        switch self {
         case .gulf:
             return .init(fajrAngle: 19.5, isha: .minutes(90))
-        case .kuwait:
-            return .init(fajrAngle: 18, isha: .angle(17.5))
-        case .qatar:
-            return .init(fajrAngle: 18, isha: .minutes(90))
-        case .moonsightingCommittee:
-            return .init(fajrAngle: 18, isha: .angle(18),
-                         methodAdjustments: .init(dhuhr: 5, maghrib: 3),
-                         seasonalTwilight: true)
-        case .singapore:
-            return .init(fajrAngle: 20, isha: .angle(18), methodAdjustments: .init(dhuhr: 1))
-        case .jakim:
+        case .jakim, .kemenag:
             return .init(fajrAngle: 20, isha: .angle(18))
-        case .kemenag:
-            return .init(fajrAngle: 20, isha: .angle(18))
-        case .turkey:
-            return .init(fajrAngle: 18, isha: .angle(17),
-                         methodAdjustments: .init(sunrise: -7, dhuhr: 5, asr: 4, maghrib: 7))
-        case .tehran:
-            return .init(fajrAngle: 17.7, isha: .angle(14), maghrib: .angle(4.5), midnight: .jafari)
         case .jafari:
-            return .init(fajrAngle: 16, isha: .angle(14), maghrib: .angle(4), midnight: .jafari)
+            return .init(fajrAngle: 16, isha: .angle(14), maghribAngle: 4)
         case .france:
             return .init(fajrAngle: 12, isha: .angle(12))
         case .russia:
@@ -76,6 +73,8 @@ public enum CalculationMethod: String, CaseIterable, Codable, Sendable, Identifi
             return .init(fajrAngle: 18, isha: .angle(17))
         case .tunisia:
             return .init(fajrAngle: 18, isha: .angle(18))
+        default:
+            return .init(fajrAngle: 18, isha: .angle(17))
         }
     }
 

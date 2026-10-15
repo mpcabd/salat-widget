@@ -36,6 +36,8 @@ echo "==> Assembling $APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/Audio"
 cp "$BIN" "$APP/Contents/MacOS/$APP_NAME"
 cp Resources/Audio/* "$APP/Contents/Resources/Audio/"
+mkdir -p "$APP/Contents/Resources/Licenses"
+cp "$SCRATCH/checkouts/adhan-swift/LICENSE" "$APP/Contents/Resources/Licenses/Adhan-LICENSE.txt"
 
 echo "==> Icon"
 ICONSET="$OUT/AppIcon.iconset"
@@ -70,7 +72,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>NSHighResolutionCapable</key><true/>
   <key>NSLocationUsageDescription</key><string>Salat uses your location to calculate accurate prayer times and the Qibla direction.</string>
   <key>NSLocationWhenInUseUsageDescription</key><string>Salat uses your location to calculate accurate prayer times and the Qibla direction.</string>
-  <key>NSHumanReadableCopyright</key><string>Prayer times computed on-device. Azan recordings from Wikimedia Commons (see About).</string>
+  <key>NSHumanReadableCopyright</key><string>Prayer times computed on-device with Adhan (MIT, © Batoul Apps). Azan recordings from Wikimedia Commons (see About).</string>
 </dict>
 </plist>
 PLIST
