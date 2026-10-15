@@ -30,6 +30,8 @@ final class AppModel {
     }
 
     private(set) var now = Date()
+    /// Stored (not derived from `now`) so views that only care about the date don't re-render every second.
+    private(set) var todayDay: CalendarDay
     private(set) var yesterday: PrayerTimes
     private(set) var today: PrayerTimes
     private(set) var tomorrow: PrayerTimes
@@ -57,6 +59,7 @@ final class AppModel {
         let placeholder = PrayerCalculator(coordinates: Coordinates(latitude: 21.4225, longitude: 39.8262),
                                            parameters: CalculationMethod.ummAlQura.parameters)
             .times(for: CalendarDay(date: Date(), timeZone: .current))
+        todayDay = placeholder.day
         yesterday = placeholder
         today = placeholder
         tomorrow = placeholder
@@ -86,8 +89,6 @@ final class AppModel {
     }
 
     func times(for day: CalendarDay) -> PrayerTimes { calculator.times(for: day) }
-
-    var todayDay: CalendarDay { CalendarDay(date: now, timeZone: timeZone) }
 
     var events: [PrayerEvent] {
         [yesterday, today, tomorrow].flatMap { t in
@@ -190,6 +191,8 @@ final class AppModel {
         lastTick = current
         now = current
 
+        let day = CalendarDay(date: current, timeZone: timeZone)
+        if day != todayDay { todayDay = day }
         if todayDay != today.day {
             recompute()
             rescheduleNotifications()
@@ -240,6 +243,7 @@ final class AppModel {
 
     func recompute() {
         let day = CalendarDay(date: clockNow, timeZone: timeZone)
+        if day != todayDay { todayDay = day }
         let calc = calculator
         yesterday = calc.times(for: day.adding(days: -1))
         today = calc.times(for: day)

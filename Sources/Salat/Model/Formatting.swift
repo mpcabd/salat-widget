@@ -32,7 +32,17 @@ struct Fmt {
         digits(String(format: "%.\(fractionDigits)f", d))
     }
 
+    /// DateFormatter creation is expensive (it opens an ICU formatter), and views format on every tick,
+    /// so formatters are cached per format/calendar/locale/time zone.
+    private static var formatters: [String: DateFormatter] = [:]
+    private static let formattersLock = NSLock()
+
     private func formatter(_ format: String, calendar: Calendar.Identifier = .gregorian) -> DateFormatter {
+        let locale = locale
+        let key = "\(format)|\(calendar)|\(locale.identifier)|\(timeZone.identifier)"
+        Self.formattersLock.lock()
+        defer { Self.formattersLock.unlock() }
+        if let f = Self.formatters[key] { return f }
         let f = DateFormatter()
         var cal = Calendar(identifier: calendar)
         cal.timeZone = timeZone
@@ -41,16 +51,20 @@ struct Fmt {
         f.locale = locale
         f.timeZone = timeZone
         f.dateFormat = format
+        Self.formatters[key] = f
         return f
     }
+
+    private static let systemUses24Hour: Bool = {
+        let fmt = DateFormatter.dateFormat(fromTemplate: "j", options: 0, locale: Locale.current) ?? "h"
+        return !fmt.contains("a")
+    }()
 
     var uses24Hour: Bool {
         switch clock {
         case .twelveHour: return false
         case .twentyFourHour: return true
-        case .system:
-            let fmt = DateFormatter.dateFormat(fromTemplate: "j", options: 0, locale: Locale.current) ?? "h"
-            return !fmt.contains("a")
+        case .system: return Self.systemUses24Hour
         }
     }
 

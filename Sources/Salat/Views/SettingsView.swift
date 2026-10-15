@@ -89,7 +89,7 @@ struct GeneralSettings: View {
             Section(L.t("general.display")) {
                 Stepper(value: $model.settings.hijriOffset, in: -3...3) {
                     LabeledContent(L.t("general.hijriOffset")) {
-                        Text(model.fmt.hijri(model.now, offsetDays: model.settings.hijriOffset))
+                        Text(model.fmt.hijri(model.todayDay.startDate(in: model.timeZone).addingTimeInterval(43200), offsetDays: model.settings.hijriOffset))
                             .foregroundStyle(.secondary)
                     }
                 }
