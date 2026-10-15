@@ -142,8 +142,8 @@ swift run prayerkit-check 21.4225 39.8262 Asia/Riyadh ummAlQura 2026-10-06
   - [Hamza Moaz](https://soundcloud.com/theislamicsound/beautiful-azan-by-qari-hamza-maaz)
   - [Mishary Alafasy, Fajr Azan (Sikah)](https://soundcloud.com/alafasy/athanalfajrsaikah)
 - **Prayer times**: calculated with [Adhan](https://github.com/batoulapps/adhan-swift) by Batoul Apps (MIT License).
-- **Made by** [Claude](https://claude.com/claude-code), for and published by [@mpcabd](https://github.com/mpcabd).
+- **Made** mostly by [Claude](https://claude.com/claude-code), for and published by [@mpcabd](https://github.com/mpcabd).
 
 ## License
 
-The code is released under the [MIT License](LICENSE). It depends on [Adhan](https://github.com/batoulapps/adhan-swift) (MIT License, © Batoul Apps), whose license ships inside the app bundle. The Azan recordings in `Resources/Audio` belong to their respective owners and are listed under [Credits](#credits).
+The code is released under the [MIT License](LICENSE). It depends on [Adhan](https://github.com/batoulapps/adhan-swift) (MIT License, © Batoul Apps), whose license ships inside the app bundle. The Azan recordings in `Resources/Audio` belong to their respective owners.
