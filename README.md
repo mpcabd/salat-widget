@@ -17,19 +17,6 @@
   <img src="docs/screenshots/hero.jpg" alt="Salat popover in English and Arabic with desktop widgets">
 </p>
 
-> [!NOTE]
-> **This entire project was built by an AI, [Claude](https://claude.com/claude-code) (Opus 5.5), working on its own.**
-> The prompt was one paragraph: *"build me the most amazing prayer times widget for macOS"* followed by *"You're completely on your own."*
-> Claude did all of the following without help:
-> - wrote the astronomical engine and checked it against a reference API
-> - designed the UI and drew the app icon in code
-> - found freely licensed Azan recordings
-> - wrote the Arabic translation and right-to-left layout
-> - built a render-to-PNG tool so it could check its own screens
-> - produced this repository and release
->
-> Xcode wasn't installed, so everything is built with the Swift command-line toolchain. No human wrote a line of the code. 🤖
-
 ## Features
 
 **🕌 Always one glance away**
@@ -145,15 +132,6 @@ swift run prayerkit-check 21.4225 39.8262 Asia/Riyadh ummAlQura 2026-10-06
 ```
 
 **Always defer to your local mosque.** Manual adjustments are one click away.
-
-### Screenshots without clicking
-
-The app has a developer mode that renders every screen to PNG and leaves your settings untouched:
-
-```sh
-export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk  # CLT only: the macOS 27 SDK's SwiftUI macros need Xcode
-swift build --product Salat && .build/debug/Salat --snapshot /tmp/salat-shots --lang ar --time 18:00
-```
 
 ## Credits
 
