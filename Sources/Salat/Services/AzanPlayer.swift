@@ -13,6 +13,12 @@ final class AzanPlayer: NSObject {
     private var player: AVAudioPlayer?
     private var chime: NSSound?
     private var shortStopWork: DispatchWorkItem?
+    /// Last playback position and when we saw it change, to detect a player that stopped advancing.
+    private var lastProgress: (time: TimeInterval, at: Date)?
+
+    /// How long playback may stand still before we treat it as dead. AVAudioPlayer never calls its delegate
+    /// when audio output disappears (e.g. playing during a maintenance wake, then the Mac sleeps again).
+    static let stallTimeout: TimeInterval = 10
 
     static let shortDuration: TimeInterval = 28
 
@@ -40,6 +46,7 @@ final class AzanPlayer: NSObject {
             }
             player = p
             isPlaying = true
+            lastProgress = (p.currentTime, Date())
             if short || preview {
                 let work = DispatchWorkItem { [weak self] in self?.fadeOutAndStop() }
                 shortStopWork = work
@@ -60,6 +67,17 @@ final class AzanPlayer: NSObject {
         playingPrayer = nil
     }
 
+    /// Called every clock tick: resets the state if playback has stalled.
+    func checkStalled(now: Date = Date()) {
+        guard isPlaying, let p = player, let last = lastProgress else { return }
+        if p.isPlaying && p.currentTime != last.time {
+            lastProgress = (p.currentTime, now)
+        } else if now.timeIntervalSince(last.at) > Self.stallTimeout {
+            NSLog("Salat: azan playback stalled at \(p.currentTime)s, stopping")
+            stop()
+        }
+    }
+
     func fadeOutAndStop() {
         guard let p = player, p.isPlaying else { stop(); return }
         p.setVolume(0, fadeDuration: 2.5)
@@ -74,6 +92,7 @@ final class AzanPlayer: NSObject {
         shortStopWork = nil
         player?.stop()
         player = nil
+        lastProgress = nil
         chime?.stop()
         chime = nil
         isPlaying = false

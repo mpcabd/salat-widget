@@ -49,6 +49,9 @@ final class AppModel {
     @ObservationIgnored private var lastLocationRefresh: Date?
     @ObservationIgnored private var rescheduleWork: DispatchWorkItem?
     @ObservationIgnored private var started = false
+    /// True between willSleep and didWake. The app keeps running during maintenance (dark) wakes in that
+    /// window, but there's no one to hear an azan and no usable audio output.
+    @ObservationIgnored private var systemAsleep = false
 
     /// Azan is only played if we notice the prayer time within this window (e.g. not hours later after sleep).
     static let lateGrace: TimeInterval = 120
@@ -162,8 +165,17 @@ final class AppModel {
 
     private func observeSystem() {
         let ws = NSWorkspace.shared.notificationCenter
+        ws.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.systemAsleep = true
+                self?.azan.stop()
+            }
+        }
         ws.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.systemChanged(wake: true) }
+            MainActor.assumeIsolated {
+                self?.systemAsleep = false
+                self?.systemChanged(wake: true)
+            }
         }
         let nc = NotificationCenter.default
         for name in [Notification.Name.NSSystemTimeZoneDidChange, .NSSystemClockDidChange] {
@@ -198,6 +210,8 @@ final class AppModel {
             rescheduleNotifications()
         }
 
+        azan.checkStalled(now: current)
+
         // Fire every event we crossed since the last tick (normally at most one).
         for event in events where event.date > previous && event.date <= current {
             if current.timeIntervalSince(event.date) <= Self.lateGrace { fire(event) }
@@ -212,7 +226,7 @@ final class AppModel {
 
     private func fire(_ event: PrayerEvent) {
         let pref = settings.preference(for: event.prayer)
-        guard pref.azan, event.prayer.isObligatory else { return }
+        guard pref.azan, event.prayer.isObligatory, !systemAsleep else { return }
         playAzan(for: event.prayer)
     }
 
