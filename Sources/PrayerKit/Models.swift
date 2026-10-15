@@ -1,15 +1,16 @@
+import Adhan
 import Foundation
 
 public struct Coordinates: Codable, Hashable, Sendable {
     public var latitude: Double
     public var longitude: Double
-    public var elevation: Double
 
-    public init(latitude: Double, longitude: Double, elevation: Double = 0) {
+    public init(latitude: Double, longitude: Double) {
         self.latitude = latitude
         self.longitude = longitude
-        self.elevation = elevation
     }
+
+    var adhan: Adhan.Coordinates { .init(latitude: latitude, longitude: longitude) }
 }
 
 /// Everything shown in the day's timeline. Only five of these are obligatory prayers;
@@ -29,25 +30,23 @@ public enum Madhab: String, CaseIterable, Codable, Sendable, Identifiable {
     case hanafi
 
     public var id: String { rawValue }
-    var shadowFactor: Double { self == .hanafi ? 2 : 1 }
+    var adhan: Adhan.Madhab { self == .hanafi ? .hanafi : .shafi }
 }
 
 public enum HighLatitudeRule: String, CaseIterable, Codable, Sendable, Identifiable {
-    case automatic, none, middleOfNight, seventhOfNight, angleBased
+    case automatic, middleOfNight, seventhOfNight, angleBased
 
     public var id: String { rawValue }
 
-    func resolved(for latitude: Double) -> HighLatitudeRule {
-        guard self == .automatic else { return self }
-        return abs(latitude) > 48 ? .seventhOfNight : .middleOfNight
+    /// `nil` lets Adhan pick its recommendation for the location.
+    var adhan: Adhan.HighLatitudeRule? {
+        switch self {
+        case .automatic: nil
+        case .middleOfNight: .middleOfTheNight
+        case .seventhOfNight: .seventhOfTheNight
+        case .angleBased: .twilightAngle
+        }
     }
-}
-
-public enum MidnightMode: String, Codable, Sendable {
-    /// Midpoint of sunset and sunrise.
-    case standard
-    /// Midpoint of sunset and Fajr (Shia).
-    case jafari
 }
 
 /// Per-prayer minute offsets.
@@ -87,6 +86,14 @@ public struct PrayerAdjustments: Codable, Hashable, Sendable {
         }
     }
 
+    init(_ a: Adhan.PrayerAdjustments) {
+        self.init(fajr: a.fajr, sunrise: a.sunrise, dhuhr: a.dhuhr, asr: a.asr, maghrib: a.maghrib, isha: a.isha)
+    }
+
+    var adhan: Adhan.PrayerAdjustments {
+        .init(fajr: fajr, sunrise: sunrise, dhuhr: dhuhr, asr: asr, maghrib: maghrib, isha: isha)
+    }
+
     static func + (lhs: PrayerAdjustments, rhs: PrayerAdjustments) -> PrayerAdjustments {
         var out = PrayerAdjustments()
         for p in Prayer.allCases { out[p] = lhs[p] + rhs[p] }
@@ -94,7 +101,7 @@ public struct PrayerAdjustments: Codable, Hashable, Sendable {
     }
 }
 
-/// How Isha (or Maghrib) is defined: by a sun depression angle or by minutes after sunset/maghrib.
+/// How Isha is defined: by a sun depression angle or by minutes after Maghrib.
 public enum TwilightRule: Codable, Hashable, Sendable {
     case angle(Double)
     case minutes(Double)
@@ -105,30 +112,53 @@ public struct CalculationParameters: Codable, Hashable, Sendable {
     public var isha: TwilightRule
     /// Isha interval used during Ramadan (Umm al-Qura uses 120 minutes instead of 90).
     public var ishaRamadanMinutes: Double?
-    /// Maghrib after sunset; `.minutes(0)` means at sunset.
-    public var maghrib: TwilightRule
-    public var midnight: MidnightMode
+    /// Maghrib when the sun reaches this depression angle; `nil` means at sunset.
+    public var maghribAngle: Double?
     /// Offsets baked into the method (e.g. Diyanet's temkin).
     public var methodAdjustments: PrayerAdjustments
-    /// Moonsighting Committee seasonal twilight model.
-    public var seasonalTwilight: Bool
+    /// The method whose Adhan preset these parameters come from; `nil` for methods Adhan doesn't ship.
+    var adhanPreset: CalculationMethod?
 
     public init(
         fajrAngle: Double,
         isha: TwilightRule,
         ishaRamadanMinutes: Double? = nil,
-        maghrib: TwilightRule = .minutes(0),
-        midnight: MidnightMode = .standard,
-        methodAdjustments: PrayerAdjustments = PrayerAdjustments(),
-        seasonalTwilight: Bool = false
+        maghribAngle: Double? = nil,
+        methodAdjustments: PrayerAdjustments = PrayerAdjustments()
     ) {
         self.fajrAngle = fajrAngle
         self.isha = isha
         self.ishaRamadanMinutes = ishaRamadanMinutes
-        self.maghrib = maghrib
-        self.midnight = midnight
+        self.maghribAngle = maghribAngle
         self.methodAdjustments = methodAdjustments
-        self.seasonalTwilight = seasonalTwilight
+    }
+
+    /// Describes an Adhan preset; the calculation itself uses Adhan's parameters unchanged.
+    init(adhanPreset method: CalculationMethod, _ adhanMethod: Adhan.CalculationMethod) {
+        let p = adhanMethod.params
+        self.init(
+            fajrAngle: p.fajrAngle,
+            isha: p.ishaInterval > 0 ? .minutes(Double(p.ishaInterval)) : .angle(p.ishaAngle),
+            maghribAngle: p.maghribAngle,
+            methodAdjustments: PrayerAdjustments(p.methodOffsets)
+        )
+        adhanPreset = method
+    }
+
+    /// Moonsighting Committee seasonal twilight model (applied by Adhan for that preset).
+    public var seasonalTwilight: Bool { adhanPreset == .moonsightingCommittee }
+
+    var adhanMethod: Adhan.CalculationMethod? { adhanPreset?.adhanMethod }
+}
+
+extension Adhan.CalculationParameters {
+    /// Adhan keeps a preset's built-in offsets `internal`, but they are part of its Codable form,
+    /// so read them from there to show them in Settings.
+    var methodOffsets: Adhan.PrayerAdjustments {
+        struct Encoded: Decodable { var methodAdjustments: Adhan.PrayerAdjustments? }
+        guard let data = try? JSONEncoder().encode(self),
+              let decoded = try? JSONDecoder().decode(Encoded.self, from: data) else { return .init() }
+        return decoded.methodAdjustments ?? .init()
     }
 }
 
@@ -164,14 +194,7 @@ public struct CalendarDay: Codable, Hashable, Sendable, Comparable {
         return CalendarDay(date: next, timeZone: cal.timeZone)
     }
 
-    var dayOfYear: Int {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "UTC")!
-        let d = cal.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
-        return cal.ordinality(of: .day, in: .year, for: d)!
-    }
-
-    var isLeapYear: Bool { (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 }
+    var dateComponents: DateComponents { DateComponents(year: year, month: month, day: day) }
 
     public static func < (a: CalendarDay, b: CalendarDay) -> Bool {
         (a.year, a.month, a.day) < (b.year, b.month, b.day)

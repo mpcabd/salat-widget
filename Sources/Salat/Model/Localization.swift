@@ -153,7 +153,6 @@ struct L10n {
         "calc.highLatHelp": ("Used when the sun doesn't go deep enough below the horizon for Fajr/Isha (e.g. summer in northern Europe).",
                              "يُستخدم عندما لا تنخفض الشمس بما يكفي لتحديد الفجر أو العشاء (مثل الصيف في شمال أوروبا)."),
         "highlat.automatic": ("Automatic", "تلقائي"),
-        "highlat.none": ("None", "بدون"),
         "highlat.middleOfNight": ("Middle of the night", "منتصف الليل"),
         "highlat.seventhOfNight": ("One-seventh of the night", "سُبع الليل"),
         "highlat.angleBased": ("Angle-based", "حسب الزاوية"),

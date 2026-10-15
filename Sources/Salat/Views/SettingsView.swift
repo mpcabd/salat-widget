@@ -368,7 +368,7 @@ struct CalculationSettings: View {
         case .minutes(let m):
             parts.append("\(L.t("prayer.isha")) \(L.t("calc.minutesAfterMaghrib").replacingOccurrences(of: "{m}", with: fmt.number(Int(m))))")
         }
-        if case .angle(let a) = p.maghrib {
+        if let a = p.maghribAngle {
             parts.append("\(L.t("prayer.maghrib")) \(fmt.number(a, fractionDigits: 1))°")
         }
         if p.seasonalTwilight { parts.append(L.t("calc.seasonal")) }

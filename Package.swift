@@ -8,8 +8,14 @@ let package = Package(
         .executable(name: "Salat", targets: ["Salat"]),
         .library(name: "PrayerKit", targets: ["PrayerKit"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/batoulapps/adhan-swift", exact: "1.5.0"),
+    ],
     targets: [
-        .target(name: "PrayerKit"),
+        .target(
+            name: "PrayerKit",
+            dependencies: [.product(name: "Adhan", package: "adhan-swift")]
+        ),
         .executableTarget(
             name: "Salat",
             dependencies: ["PrayerKit"]

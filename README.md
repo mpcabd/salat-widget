@@ -118,7 +118,7 @@ scripts/make-dmg.sh 1.0.0       # -> build/Salat-1.0.0.dmg
 ### Project layout
 
 ```
-Sources/PrayerKit/     Pure-Swift astronomical engine (methods, high-latitude rules, Qibla)
+Sources/PrayerKit/     Wrapper around the Adhan library (extra methods, imsak, Ramadan Isha, polar fallback)
 Sources/Salat/         SwiftUI app: model, services (Azan, notifications, location, widget), views
 Tests/PrayerKitTests/  Unit tests (reference timetables, invariants, methods, Qibla)
 Tests/PrayerKitCheck/  CLI that prints times for a place/method, for diffing against reference tables
@@ -136,13 +136,15 @@ The tests compare PrayerKit with reference timetables and check invariants (pray
 
 ### Accuracy
 
-Check the engine against any reference timetable:
+Prayer times are calculated by [Adhan](https://github.com/batoulapps/adhan-swift), which is tested against official timetables from many authorities. Salat adds the few things Adhan leaves to apps: methods it has no preset for (Gulf, JAKIM, Kemenag, Jafari, France, Russia, Morocco, Algeria, Tunisia), Imsak, the 120-minute Umm al-Qura Isha during Ramadan, and a fallback for days when the sun never rises or sets. Midnight and the last third of the night are measured from Maghrib to the next Fajr.
+
+Check the times against any reference timetable:
 
 ```sh
 swift run prayerkit-check 21.4225 39.8262 Asia/Riyadh ummAlQura 2026-10-06
 ```
 
-Results were compared with the [AlAdhan API](https://aladhan.com/prayer-times-api) for Makkah, New York, Cairo, London, Karachi, Istanbul, Tehran, Dubai, Casablanca and Singapore. Fajr, Sunrise, Dhuhr, Maghrib and Isha match to the minute; Asr can differ by one minute because of rounding. The few larger differences are deliberate: Salat applies the official offsets published by Diyanet, Dubai, Morocco and the Moonsighting Committee. **Always defer to your local mosque.** Manual adjustments are one click away.
+**Always defer to your local mosque.** Manual adjustments are one click away.
 
 ### Screenshots without clicking
 
@@ -161,9 +163,9 @@ swift build --product Salat && .build/debug/Salat --snapshot /tmp/salat-shots --
   - [Adam-synagda](https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg) (CC0)
   - [Andrewler](https://commons.wikimedia.org/wiki/File:Azan.ogg) (CC BY-SA 4.0)
   - [Fraguando, Hassan II Mosque](https://commons.wikimedia.org/wiki/File:Llamada_a_oraci%C3%B3n_Mezquita_Hassan_II.wav) (CC BY-SA 4.0)
-- **Astronomy**: the solar-position formulas follow [PrayTimes.org](http://praytimes.org). The method offsets and the Moonsighting Committee seasonal model follow the [Adhan](https://github.com/batoulapps/adhan-swift) library.
+- **Prayer times**: calculated with [Adhan](https://github.com/batoulapps/adhan-swift) by Batoul Apps (MIT License).
 - **Made by** [Claude](https://claude.com/claude-code), for and published by [@mpcabd](https://github.com/mpcabd).
 
 ## License
 
-The code is released under the [MIT License](LICENSE). The Azan recordings in `Resources/Audio` keep their original licenses, listed under [Credits](#credits).
+The code is released under the [MIT License](LICENSE). It depends on [Adhan](https://github.com/batoulapps/adhan-swift) (MIT License, © Batoul Apps), whose license ships inside the app bundle. The Azan recordings in `Resources/Audio` keep their original licenses, listed under [Credits](#credits).

@@ -77,8 +77,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     /// Reverse-geocodes to a human name and the place's own time zone.
     func resolve(_ location: CLLocation) async -> SavedLocation {
         let coords = Coordinates(latitude: location.coordinate.latitude,
-                                 longitude: location.coordinate.longitude,
-                                 elevation: max(0, location.altitude))
+                                 longitude: location.coordinate.longitude)
         let placemark = try? await CLGeocoder().reverseGeocodeLocation(location).first
         let name = placemark?.locality ?? placemark?.subAdministrativeArea ?? placemark?.administrativeArea
             ?? String(format: "%.3f, %.3f", coords.latitude, coords.longitude)
