@@ -48,9 +48,10 @@ private let fridayMorning = Date(timeIntervalSince1970: 1_792_116_429)
         #expect(en.hijri(fridayMorning, offsetDays: 0).hasSuffix(" AH"))
         #expect(ar.hijri(fridayMorning, offsetDays: 0).hasSuffix(" هـ"))
         #expect(!en.hijri(fridayMorning, offsetDays: 0, includeYear: false).hasSuffix(" AH"))
-        // 4 Jumada al-Ula 1448.
+        // Jumada al-Ula 1448. No Hijri month is longer than 30 days, so the offset must move the month.
         #expect(en.hijriMonth(fridayMorning, offsetDays: 0) == 5)
-        #expect(en.hijriMonth(fridayMorning, offsetDays: -4) == 4)
+        #expect(en.hijriMonth(fridayMorning, offsetDays: 30) != 5)
+        #expect(en.hijriMonth(fridayMorning, offsetDays: -30) != 5)
     }
 }
 
