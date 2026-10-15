@@ -19,5 +19,9 @@ let package = Package(
             dependencies: ["PrayerKit"],
             path: "Tests/PrayerKitCheck"
         ),
+        .testTarget(
+            name: "PrayerKitTests",
+            dependencies: ["PrayerKit"]
+        ),
     ]
 )

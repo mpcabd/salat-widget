@@ -120,10 +120,19 @@ scripts/make-dmg.sh 1.0.0       # -> build/Salat-1.0.0.dmg
 ```
 Sources/PrayerKit/     Pure-Swift astronomical engine (methods, high-latitude rules, Qibla)
 Sources/Salat/         SwiftUI app: model, services (Azan, notifications, location, widget), views
+Tests/PrayerKitTests/  Unit tests (reference timetables, invariants, methods, Qibla)
 Tests/PrayerKitCheck/  CLI that prints times for a place/method, for diffing against reference tables
 scripts/               App bundling, DMG, icon and screenshot compositing
 Resources/             Azan audio and app icon
 ```
+
+### Tests
+
+```sh
+swift test
+```
+
+The tests compare PrayerKit with reference timetables and check invariants (prayer order, Ramadan Isha, high latitudes, manual adjustments). They run on every push and pull request via GitHub Actions.
 
 ### Accuracy
 
