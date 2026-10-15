@@ -9,7 +9,7 @@ cd "$ROOT"
 
 APP_NAME="Salat"
 BUNDLE_ID="com.mpcabd.salat"
-VERSION="${SALAT_VERSION:-1.0.1}"
+VERSION="${SALAT_VERSION:-1.1.0}"
 BUILD_NUMBER="$(date +%Y%m%d%H%M)"
 OUT="$ROOT/build"
 APP="$OUT/$APP_NAME.app"
@@ -72,7 +72,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>NSHighResolutionCapable</key><true/>
   <key>NSLocationUsageDescription</key><string>Salat uses your location to calculate accurate prayer times and the Qibla direction.</string>
   <key>NSLocationWhenInUseUsageDescription</key><string>Salat uses your location to calculate accurate prayer times and the Qibla direction.</string>
-  <key>NSHumanReadableCopyright</key><string>Prayer times computed on-device with Adhan (MIT, © Batoul Apps). Azan recordings from Wikimedia Commons (see About).</string>
+  <key>NSHumanReadableCopyright</key><string>Prayer times computed on-device with Adhan (MIT, © Batoul Apps). Azan recordings are credited in Settings → About.</string>
 </dict>
 </plist>
 PLIST

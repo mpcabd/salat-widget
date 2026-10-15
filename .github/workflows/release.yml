@@ -1,0 +1,47 @@
+name: Release
+
+# Builds the universal Salat.app and DMG for an existing release and attaches the DMG to it.
+# Create the tag and a (draft) release first, then run this from the Actions tab or with:
+#   gh workflow run release.yml -f tag=v1.1.0
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v1.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    env:
+      TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Show toolchain
+        run: swift --version
+
+      - name: Build Salat.app
+        run: SALAT_VERSION="${TAG#v}" scripts/build-app.sh
+
+      # build-app.sh falls back to a single-architecture build; a release must be universal.
+      - name: Check the binary is universal
+        run: |
+          archs="$(lipo -archs build/Salat.app/Contents/MacOS/Salat)"
+          echo "Architectures: $archs"
+          [[ "$archs" == *arm64* && "$archs" == *x86_64* ]]
+
+      - name: Package DMG
+        run: |
+          scripts/make-dmg.sh "${TAG#v}" | tee checksum.txt
+          echo "SHA-256: \`$(cut -d' ' -f1 checksum.txt)\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Attach DMG to the release
+        run: gh release upload "$TAG" "build/Salat-${TAG#v}.dmg" --clobber
