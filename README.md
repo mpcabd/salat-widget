@@ -98,10 +98,12 @@ Requires macOS 14 Sonoma or later. Runs natively on Apple silicon and Intel.
 You only need the Command Line Tools (Xcode is not required):
 
 ```sh
-scripts/build-app.sh            # -> build/Salat.app (universal, ad-hoc signed)
+scripts/build-app.sh            # -> build/Salat.app (universal if the toolchain can, else this Mac's arch; ad-hoc signed)
 scripts/build-app.sh --install  # also copies to /Applications and launches it
-scripts/make-dmg.sh 1.0.0       # -> build/Salat-1.0.0.dmg
+scripts/make-dmg.sh 1.1.0       # -> build/Salat-1.1.0.dmg
 ```
+
+Release DMGs are built by the **Release** workflow, so they're always universal: create the tag and a draft release, then run `gh workflow run release.yml -f tag=v1.1.0`. It attaches the DMG to the release and prints its SHA-256 in the run summary.
 
 ### Project layout
 
