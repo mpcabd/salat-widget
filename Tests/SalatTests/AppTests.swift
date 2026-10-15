@@ -147,12 +147,26 @@ private let fridayMorning = Date(timeIntervalSince1970: 1_792_116_429)
     @Test func catalogue() {
         let ids = AzanSound.builtIn.map(\.id)
         #expect(Set(ids).count == ids.count)
-        #expect(AzanSound.sound(id: AzanSound.defaultID) != nil)
+        #expect(AzanSound.choices(fajr: false).contains { $0.id == AzanSound.defaultID(fajr: false) })
+        #expect(AzanSound.choices(fajr: true).contains { $0.id == AzanSound.defaultID(fajr: true) })
         #expect(AzanSound.sound(id: AzanSound.chimeID)?.fileName == nil)
         #expect(AzanSound.sound(id: "missing") == nil)
-        let fakhry = AzanSound.sound(id: "fakhry")!
-        #expect(fakhry.name(arabic: false) == fakhry.nameEN)
-        #expect(fakhry.name(arabic: true) == fakhry.nameAR)
+        let first = AzanSound.builtIn[0]
+        #expect(AzanSound.sound(id: first.id) == first)
+        #expect(first.name(arabic: false) == first.nameEN)
+        #expect(first.name(arabic: true) == first.nameAR)
+        #expect(AzanSound.sound(id: AzanSound.defaultID(fajr: false))?.isFajr == false)
+    }
+
+    @Test func removedSoundsFallBackToDefault() {
+        #expect(AzanSound.validID("azeez", fajr: false) == AzanSound.defaultID(fajr: false))
+        #expect(AzanSound.validID("azeez", fajr: true) == AzanSound.defaultID(fajr: true))
+        #expect(AzanSound.validID(AzanCatalog.defaultID, fajr: false) == AzanCatalog.defaultID)
+        #expect(AzanSound.validID(AzanSound.chimeID, fajr: true) == AzanSound.chimeID)
+        for fajrOnly in AzanSound.builtIn where fajrOnly.isFajr {
+            #expect(AzanSound.validID(fajrOnly.id, fajr: false) == AzanSound.defaultID(fajr: false))
+            #expect(AzanSound.validID(fajrOnly.id, fajr: true) == fajrOnly.id)
+        }
     }
 
     @Test func bundledFilesExist() {
@@ -163,6 +177,94 @@ private let fridayMorning = Date(timeIntervalSince1970: 1_792_116_429)
             guard let file = sound.fileName else { continue }
             #expect(FileManager.default.fileExists(atPath: audio.appendingPathComponent(file).path), "\(file)")
         }
+        // Every bundled file ships in the app, so each one should be listed in AzanCatalog.
+        let listed = Set(AzanSound.builtIn.compactMap(\.fileName))
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: audio.path)) ?? []
+        for file in files where !file.hasPrefix(".") {
+            #expect(listed.contains(file), "\(file) is in Resources/Audio but not in AzanCatalog")
+        }
+    }
+}
+
+@Suite struct AzanLibraryTests {
+    let repo = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+    var sample: URL { repo.appendingPathComponent("Resources/Audio/\(AzanCatalog.recordings[0].fileName!)") }
+
+    func makeLibrary() -> AzanLibrary {
+        AzanLibrary(directory: FileManager.default.temporaryDirectory
+            .appendingPathComponent("SalatTests-\(UUID().uuidString)/Azans", isDirectory: true))
+    }
+
+    @Test func importCopiesPlayableFiles() throws {
+        let library = makeLibrary()
+        let recording = try library.importFile(at: sample)
+        #expect(recording.id.hasPrefix(AzanLibrary.idPrefix))
+        #expect(recording.name == sample.deletingPathExtension().lastPathComponent)
+        #expect(!recording.isFajr)
+        #expect(FileManager.default.fileExists(atPath: library.url(for: recording).path))
+        library.remove(recording)
+        #expect(!FileManager.default.fileExists(atPath: library.url(for: recording).path))
+    }
+
+    @Test func importRejectsNonAudio() throws {
+        let library = makeLibrary()
+        let text = FileManager.default.temporaryDirectory.appendingPathComponent("not-audio-\(UUID().uuidString).mp3")
+        try Data("hello".utf8).write(to: text)
+        #expect(throws: AzanLibrary.ImportError.notPlayable) { try library.importFile(at: text) }
+    }
+
+    @Test func selectionsFollowTheLibrary() {
+        var s = AppSettings()
+        let regular = UserAzan(id: "user.a", name: "A", fileName: "a.mp3")
+        let fajr = UserAzan(id: "user.f", name: "F", fileName: "f.mp3", isFajr: true)
+        s.userAzans = [regular, fajr]
+        s.azanSound = regular.id
+        s.fajrAzanSound = fajr.id
+        s.normalizeAzanSelections()
+        #expect(s.azanSound == regular.id)
+        #expect(s.fajrAzanSound == fajr.id)
+
+        // A Fajr recording can't be used for other prayers.
+        s.azanSound = fajr.id
+        s.normalizeAzanSelections()
+        #expect(s.azanSound == AzanSound.defaultID(fajr: false))
+
+        // Removing a recording resets whoever used it.
+        s.userAzans = [regular]
+        s.normalizeAzanSelections()
+        #expect(s.fajrAzanSound == AzanSound.defaultID(fajr: true))
+    }
+
+    @Test func migratesTheOldCustomFile() throws {
+        let library = makeLibrary()
+        // The old custom file lived next to the library folder, in Application Support/Salat.
+        let old = library.directory.deletingLastPathComponent().appendingPathComponent("custom-azan.mp3")
+        try FileManager.default.createDirectory(at: old.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: sample, to: old)
+        let json = #"{"azanSound": "custom", "fajrAzanSound": "\#(AzanCatalog.defaultFajrID)", "customAzanPath": "\#(old.path)"}"#
+        var s = try JSONDecoder().decode(AppSettings.self, from: Data(json.utf8))
+
+        #expect(SettingsPersistence.migrateCustomAzan(from: Data(json.utf8), into: &s, library: library))
+        s.normalizeAzanSelections()
+        #expect(s.userAzans.count == 1)
+        #expect(s.azanSound == s.userAzans[0].id)
+        #expect(s.fajrAzanSound == AzanCatalog.defaultFajrID)
+        #expect(FileManager.default.fileExists(atPath: library.url(for: s.userAzans[0]).path))
+        #expect(!FileManager.default.fileExists(atPath: old.path))
+
+        // Saved settings no longer carry the old key; already-migrated settings aren't migrated again.
+        let saved = try JSONEncoder().encode(s)
+        #expect(!String(decoding: saved, as: UTF8.self).contains("customAzanPath"))
+        #expect(!SettingsPersistence.migrateCustomAzan(from: Data(json.utf8), into: &s, library: library))
+    }
+
+    @Test func missingOldFileIsIgnored() throws {
+        let json = #"{"azanSound": "custom", "customAzanPath": "/nonexistent/azan.mp3"}"#
+        var s = try JSONDecoder().decode(AppSettings.self, from: Data(json.utf8))
+        #expect(!SettingsPersistence.migrateCustomAzan(from: Data(json.utf8), into: &s, library: makeLibrary()))
+        s.normalizeAzanSelections()
+        #expect(s.azanSound == AzanSound.defaultID(fajr: false))
     }
 }
 

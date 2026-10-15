@@ -9,6 +9,8 @@ final class AzanPlayer: NSObject {
     private(set) var isPlaying = false
     private(set) var playingPrayer: Prayer?
     private(set) var isPreview = false
+    /// The file being played, or nil for the chime.
+    private(set) var playingURL: URL?
 
     private var player: AVAudioPlayer?
     private var chime: NSSound?
@@ -26,6 +28,7 @@ final class AzanPlayer: NSObject {
         stop()
         isPreview = preview
         playingPrayer = prayer
+        playingURL = url
 
         guard let url else {
             playChime(volume: volume)
@@ -97,6 +100,7 @@ final class AzanPlayer: NSObject {
         chime = nil
         isPlaying = false
         playingPrayer = nil
+        playingURL = nil
         isPreview = false
     }
 }
